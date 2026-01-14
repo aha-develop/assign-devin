@@ -1,0 +1,107 @@
+{
+  "name": "aha.assign-devin-ai",
+  "description": "Assign to Devin.ai",
+  "version": "0.0.0",
+  "author": "tim-field",
+  "repository": {
+    "type": "git",
+    "url": "TODO: Add the GitHub URL to your extension in package.json"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/react": "^16.14.68",
+    "aha-cli": "^1.17.0"
+  },
+  "ahaExtension": {
+    "contributes": {
+      "views": {
+        "assignDevinButton": {
+          "title": "Devin",
+          "entryPoint": "src/views/AssignDevinButton.tsx",
+          "host": "attribute",
+          "recordTypes": [
+            "Feature",
+            "Requirement"
+          ]
+        }
+      },
+      "commands": {
+        "assignDevin": {
+          "title": "Assign to Devin.ai",
+          "entryPoint": "src/commands/assignDevin.ts",
+          "recordTypes": [
+            "Feature",
+            "Requirement"
+          ]
+        }
+      },
+      "events": {
+        "createDevinSession": {
+          "title": "Create Devin Session",
+          "entryPoint": "src/events/createDevinSession.ts",
+          "handles": [
+            "aha.assign-devin-ai.createDevinSession"
+          ]
+        }
+      },
+      "settings": {
+        "repository": {
+          "title": "GitHub Repository",
+          "description": "Format: owner/repo (e.g., myorg/myrepo)",
+          "type": "string",
+          "required": true,
+          "scope": [
+            "account",
+            "user"
+          ]
+        },
+        "baseBranch": {
+          "title": "Base Branch",
+          "description": "Default branch for Devin to branch from",
+          "type": "string",
+          "default": "main",
+          "scope": [
+            "account",
+            "user"
+          ]
+        },
+        "devinApiToken": {
+          "title": "Devin API Token",
+          "description": "Personal or service API token starting with apk_",
+          "type": "secret",
+          "scope": [
+            "account"
+          ],
+          "required": true
+        },
+        "sessionTags": {
+          "title": "Default Session Tags",
+          "description": "Comma-separated list of tags to apply to new Devin sessions.",
+          "type": "string",
+          "scope": [
+            "account",
+            "user"
+          ]
+        },
+        "customInstructions": {
+          "title": "Custom Instructions",
+          "description": "Optional extra guidance appended to the session prompt.",
+          "type": "string",
+          "scope": [
+            "account",
+            "user"
+          ]
+        },
+        "playbookId": {
+          "title": "Playbook ID",
+          "description": "Optional Devin playbook identifier to attach to new sessions.",
+          "type": "string",
+          "scope": [
+            "account",
+            "user"
+          ]
+        }
+      }
+    }
+  }
+}
