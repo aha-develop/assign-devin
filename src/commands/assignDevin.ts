@@ -1,9 +1,11 @@
 import { buildSessionPrompt } from "../lib/buildSessionPrompt";
-import { callServer } from "../lib/serverCall";
 import { parseTags } from "../lib/settings";
 import { EXTENSION_ID, SESSION_FIELD } from "../lib/constants";
 import { isAssignableRecord, RecordType } from "../lib/records";
-import { DevinSessionData } from "../lib/types";
+import {
+  createDevinSession,
+  DevinSessionData,
+} from "../events/createDevinSession";
 
 const FIELD_DESCRIPTION = "Devin session";
 
@@ -60,9 +62,9 @@ aha.on("assignDevin", async ({ record }, { settings }) => {
 
     aha.commandOutput("Requesting Devin session...");
 
-    const session = await callServer<DevinSessionData>("createDevinSession", {
-      recordReference: typedRecord.referenceNum,
-      recordType: typedRecord.typename,
+    const session = await createDevinSession({
+      recordReference: record.referenceNum,
+      recordType: record.typename,
       title,
       prompt,
       repository,

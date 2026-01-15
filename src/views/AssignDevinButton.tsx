@@ -1,10 +1,12 @@
 import React, { useState } from "react";
+import {
+  createDevinSession,
+  DevinSessionData,
+} from "../events/createDevinSession";
 import { buildSessionPrompt } from "../lib/buildSessionPrompt";
-import { callServer } from "../lib/serverCall";
-import { parseTags } from "../lib/settings";
 import { EXTENSION_ID, SESSION_FIELD } from "../lib/constants";
 import { RecordType, isAssignableRecord } from "../lib/records";
-import { DevinSessionData } from "../lib/types";
+import { parseTags } from "../lib/settings";
 import { Icon } from "./Icon";
 
 type Status = "idle" | "loading" | "success" | "error" | "existing";
@@ -67,7 +69,7 @@ const AssignDevinButton: React.FC<AssignDevinButtonProps> = ({
 
       setMessage("Creating Devin session...");
 
-      const session = await callServer("createDevinSession", {
+      const session = await createDevinSession({
         recordReference: record.referenceNum,
         recordType: record.typename,
         title,
