@@ -22,17 +22,19 @@ const DevinResponseSchema = z.object({
   is_new_session: z.nullable(z.boolean()),
 });
 
-export type DevinSessionData = {
-  sessionId: string;
-  sessionUrl: string;
-  assignedAt: string;
-  title: string;
-  prompt: string;
-  repository: string;
-  baseBranch?: string;
-  tags?: string[];
-  playbookId?: string;
-};
+const DevinSessionDataSchema = z.object({
+  sessionId: z.string(),
+  sessionUrl: z.string(),
+  assignedAt: z.string(),
+  title: z.string(),
+  prompt: z.string(),
+  repository: z.string(),
+  baseBranch: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  playbookId: z.string().optional(),
+});
+
+export type DevinSessionData = z.infer<typeof DevinSessionDataSchema>;
 
 export type CreateSession = z.infer<typeof CreateSessionSchema>;
 
@@ -43,8 +45,6 @@ async function createSession({
   playbookId,
   repository,
   baseBranch,
-  recordReference,
-  recordType,
   apiKey,
 }: {
   prompt: string;
@@ -53,18 +53,8 @@ async function createSession({
   playbookId?: string;
   repository: string;
   baseBranch?: string;
-  recordReference: string;
-  recordType: "Feature" | "Requirement";
   apiKey: string;
 }): Promise<DevinSessionData> {
-  console.log("Creating Devin session", {
-    recordReference,
-    recordType,
-    title,
-    repository,
-    baseBranch,
-  });
-
   const sessionPayload: Record<string, unknown> = {
     title,
     prompt,
@@ -77,6 +67,7 @@ async function createSession({
   if (playbookId) {
     sessionPayload.playbook_id = playbookId;
   }
+
   const response = await fetch(DEVIN_API_URL, {
     method: "POST",
     headers: {
@@ -118,7 +109,7 @@ async function createSession({
 }
 
 export async function createDevinSession(
-  args: Omit<CreateSession, "apiKey">
+  args: CreateSession
 ): Promise<DevinSessionData> {
   return callEventHandler<DevinSessionData>({
     extensionId: EXTENSION_ID,
@@ -131,17 +122,9 @@ registerEventHandler({
   extensionId: EXTENSION_ID,
   eventName: "createDevinSession",
   schema: CreateSessionSchema,
+  resultSchema: DevinSessionDataSchema,
   handler: async (args, { settings }) => {
-    const {
-      prompt,
-      title,
-      tags,
-      playbookId,
-      repository,
-      baseBranch,
-      recordReference,
-      recordType,
-    } = args;
+    const { prompt, title, tags, playbookId, repository, baseBranch } = args;
 
     const defaultTags = parseTags(settings.sessionTags as string | undefined);
     const effectiveTags = tags && tags.length ? tags : defaultTags;
@@ -160,8 +143,6 @@ registerEventHandler({
       playbookId: effectivePlaybookId,
       repository,
       baseBranch,
-      recordReference,
-      recordType,
       apiKey,
     });
 

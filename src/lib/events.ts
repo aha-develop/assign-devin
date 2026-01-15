@@ -20,15 +20,6 @@ const baseEventSchema = z.object({
   eventKey: z.string(),
 });
 
-/**
- * Schema for validating server responses stored in extension fields.
- */
-const serverResponseSchema = <T extends z.ZodType>(resultSchema: T) =>
-  z.discriminatedUnion("ok", [
-    z.object({ ok: z.literal(true), result: resultSchema }),
-    z.object({ ok: z.literal(false), message: z.string() }),
-  ]);
-
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -62,20 +53,18 @@ type CallServerOptions = {
   timeoutMs?: number;
 };
 
-const DEFAULT_POLL_INTERVAL = 500;
+const DEFAULT_POLL_INTERVAL = 1000;
 const DEFAULT_TIMEOUT_MS = 60000;
 
 export async function callEventHandler<T>({
   extensionId,
   eventName,
   args,
-  resultSchema = z.unknown() as z.ZodType<T>,
   options = {},
 }: {
   extensionId: string;
   eventName: string;
   args: Record<string, unknown>;
-  resultSchema?: z.ZodType<T>;
   options?: CallServerOptions;
 }): Promise<T> {
   const {
@@ -84,7 +73,6 @@ export async function callEventHandler<T>({
   } = options;
 
   const eventKey = generateEventKey(eventName);
-  const responseSchema = serverResponseSchema(resultSchema);
 
   // Clear any previous response with the same key
   await aha.account.clearExtensionField(extensionId, eventKey).catch(() => {
@@ -103,33 +91,42 @@ export async function callEventHandler<T>({
   do {
     await delay(pollInterval);
 
-    const raw = await aha.account.getExtensionField(extensionId, eventKey);
+    const stored = await aha.account.getExtensionField<ServerResponse<T>>(
+      extensionId,
+      eventKey
+    );
 
-    if (raw != null) {
+    if (stored) {
       // Clean up the stored result
       await aha.account.clearExtensionField(extensionId, eventKey).catch(() => {
         /* ignore */
       });
 
-      const parsed = responseSchema.safeParse(raw);
-
-      if (!parsed.success) {
-        throw new Error(`Invalid server response: ${parsed.error.message}`);
+      if (stored.ok) {
+        return stored.result;
       }
 
-      const response = parsed.data;
-      if (response.ok === false) {
-        throw new Error(response.message);
-      }
+      console.warn(
+        `Event handler error ${extensionId}.${eventName} ${JSON.stringify(
+          stored
+        )}`
+      );
 
-      return response.result;
+      const message =
+        "message" in stored
+          ? stored.message
+          : "Server reported an unknown error";
+      throw new Error(message);
     }
   } while (Date.now() < timeoutAt);
 
   throw new Error(`Timed out waiting for ${eventName} response`);
 }
 
-export function registerEventHandler<TSchema extends z.ZodType, TResult>({
+export function registerEventHandler<
+  TSchema extends z.ZodType,
+  RSchema extends z.ZodType
+>({
   extensionId,
   eventName,
   schema,
@@ -138,7 +135,11 @@ export function registerEventHandler<TSchema extends z.ZodType, TResult>({
   extensionId: string;
   eventName: string;
   schema: TSchema;
-  handler: (args: z.infer<TSchema>, context: Aha.Context) => Promise<TResult>;
+  resultSchema: RSchema;
+  handler: (
+    args: z.infer<TSchema>,
+    context: Aha.Context
+  ) => Promise<z.infer<RSchema>>;
 }) {
   aha.on({ event: `${extensionId}.${eventName}` }, async (args, context) => {
     const eventKeyResult = baseEventSchema.safeParse(args);
