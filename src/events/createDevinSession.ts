@@ -14,13 +14,12 @@ const CreateSessionSchema = z.object({
   playbookId: z.string().optional(),
   recordReference: z.string(),
   recordType: z.literal(["Feature", "Requirement"]),
-  apiKey: z.string(),
 });
 
 const DevinResponseSchema = z.object({
   session_id: z.string(),
-  session_url: z.string(),
-  is_new_session: z.boolean().optional(),
+  url: z.string(),
+  is_new_session: z.nullable(z.boolean()),
 });
 
 export type DevinSessionData = {
@@ -47,7 +46,17 @@ async function createSession({
   recordReference,
   recordType,
   apiKey,
-}: CreateSession): Promise<DevinSessionData> {
+}: {
+  prompt: string;
+  title: string;
+  tags?: string[];
+  playbookId?: string;
+  repository: string;
+  baseBranch?: string;
+  recordReference: string;
+  recordType: "Feature" | "Requirement";
+  apiKey: string;
+}): Promise<DevinSessionData> {
   console.log("Creating Devin session", {
     recordReference,
     recordType,
@@ -68,7 +77,6 @@ async function createSession({
   if (playbookId) {
     sessionPayload.playbook_id = playbookId;
   }
-
   const response = await fetch(DEVIN_API_URL, {
     method: "POST",
     headers: {
@@ -90,12 +98,15 @@ async function createSession({
 
   const result = DevinResponseSchema.safeParse(data);
   if (!result.success) {
+    console.error(
+      `Invalid Devin API response ${JSON.stringify(data)} ${result.error}`
+    );
     throw new Error("Invalid response from Devin API");
   }
 
   return {
     sessionId: result.data.session_id,
-    sessionUrl: result.data.session_url,
+    sessionUrl: result.data.url,
     assignedAt: new Date().toISOString(),
     title,
     prompt,
@@ -130,13 +141,13 @@ registerEventHandler({
       baseBranch,
       recordReference,
       recordType,
-      apiKey,
     } = args;
 
     const defaultTags = parseTags(settings.sessionTags as string | undefined);
     const effectiveTags = tags && tags.length ? tags : defaultTags;
     const effectivePlaybookId =
       playbookId || (settings.playbookId as string | undefined) || undefined;
+    const apiKey = settings.devinApiToken as string | undefined;
 
     if (!apiKey) {
       throw new Error("Devin API key is not configured");

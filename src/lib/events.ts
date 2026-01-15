@@ -141,26 +141,27 @@ export function registerEventHandler<TSchema extends z.ZodType, TResult>({
   handler: (args: z.infer<TSchema>, context: Aha.Context) => Promise<TResult>;
 }) {
   aha.on({ event: `${extensionId}.${eventName}` }, async (args, context) => {
-    const parsed = schema.safeParse(args);
-    if (!parsed.success) {
-      // Try to extract eventKey for error reporting
-      const eventKeyResult = baseEventSchema.safeParse(args);
-      if (eventKeyResult.success) {
-        await writeResult({
-          extensionId,
-          eventKey: eventKeyResult.data.eventKey,
-          payload: storeError(parsed.error.message),
-        });
-      } else {
-        console.error(
-          `${extensionId}.${eventName} called with invalid args:`,
-          parsed.error.message
-        );
-      }
+    const eventKeyResult = baseEventSchema.safeParse(args);
+    if (!eventKeyResult.success) {
+      console.error(
+        `Missing or invalid eventKey in arguments for ${extensionId}.${eventName}`
+      );
       return;
     }
+    const eventKey = eventKeyResult.data.eventKey;
+    const parsed = schema.safeParse(args);
 
-    const eventKey = (parsed.data as { eventKey: string }).eventKey;
+    if (!parsed.success) {
+      await writeResult({
+        extensionId,
+        eventKey,
+        payload: storeError(
+          "Invalid arguments passed to event handler: " + parsed.error.message
+        ),
+      });
+
+      return;
+    }
 
     try {
       const result = await handler(parsed.data, context);
