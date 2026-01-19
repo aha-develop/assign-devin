@@ -1,50 +1,39 @@
 # Assign to Devin.ai
 
-This is an extension for [Aha! Develop](https://www.aha.io/develop) providing integration with [Devin](https://devin.ai/).
-Assign Features and Requirements to [Devin](https://devin.ai/) directly from Aha! Develop.
+This is an extension for [Aha! Develop](https://www.aha.io/develop) providing integration with [Devin.ai](https://devin.ai/).
+Assign Features and Requirements to [Devin.ai](https://devin.ai/) directly from Aha! Develop.
 
-This extension adds a new Devin.ai field which you can assign to Features and Layouts.
+
+## Screen shots
+
+
+<img width="577" height="72" alt="image" src="https://github.com/user-attachments/assets/c4c3a3e0-a724-4af1-9796-4e3c33b5e2da" />
+
+<img width="579" height="93" alt="image" src="https://github.com/user-attachments/assets/427bcab2-2767-4fb8-aca1-64b455e4ded6" />
 
 ## Demo
 
 [demo.mp4](https://github.com/user-attachments/assets/bf225008-214e-4550-885c-02cf6751c279)
 
-## Screen shots
-
-todo
 
 ## Installing the extension
 
-To install the extension authorize Devin.ai with your github account
+To install the extension with your github account
 
-Make sure Devin has access to your repositories. [Refer to Devins documentation on this](https://docs.devin.ai/onboard-devin/repo-setup#set-up-a-repository)
+1. Authorize Devin.ai with your GitHub account, via the [Devin.ai admin interface](https://docs.devin.ai/onboard-devin/repo-setup#set-up-a-repository).
 
-Setup the extension by specifying the API key, the repo and branch.
+2. Setup the extension **Account Settings -> Extensions -> Devin.ai** by specifying your Devon.ai **API key**, the **GitHub repository** and **Base branch**.
 
-Add the extension field to your Feature and Requirement screens.
+3. Add the extension field to your Feature and Requirement screens.
 
-A link to the created devin.ai session will be displayed after sending.
+[setup-extension-fied.mp4](https://github.com/user-attachments/assets/f2745b85-d038-4371-86a3-3beabdf4103d)
 
-## Contributions
-
-- Attribute view: **Devin** – renders on Feature and Requirement sidebars to show assignment status and trigger new sessions.
-
-## Configuration
-
-1. Configure the **GitHub Repository** and optional **Base Branch** so Devin knows where to work.
-2. Set the **Devin API Token** secret (starts with `apk_`) in the extension settings.
-3. Optionally provide default session tags (comma separated), custom prompt instructions, and a playbook ID.
 
 ## Development
 
 ```sh
 npx aha-cli extension:install
 npx aha-cli extension:watch
-```
-
-## Building
-
-```sh
 npx aha-cli extension:build
 ```
 
