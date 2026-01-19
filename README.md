@@ -7,7 +7,7 @@ This extension adds a new Devin.ai field which you can assign to Features and La
 
 ## Demo
 
-todo
+[demo.mp4](https://github.com/user-attachments/assets/bf225008-214e-4550-885c-02cf6751c279)
 
 ## Screen shots
 
