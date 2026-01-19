@@ -5,6 +5,15 @@ import * as z from "zod";
 
 const DEVIN_API_URL = "https://api.devin.ai/v1/sessions";
 
+// Ensure this aligns with package.json extension settings
+const ExtensionSettingsSchema = z.object({
+  apiKey: z.string().optional(),
+  personalApiKey: z.string().optional(),
+  sessionTags: z.string().optional(),
+  customInstructions: z.string().optional(),
+  playbookId: z.string().optional(),
+});
+
 const CreateSessionSchema = z.object({
   title: z.string(),
   prompt: z.string(),
@@ -81,8 +90,8 @@ async function createSession({
 
   if (!response.ok) {
     const message =
-      typeof data === "object" && data && "message" in data
-        ? String((data as { message: unknown }).message)
+      typeof data === "object" && data && "detail" in data
+        ? String((data as { detail: unknown }).detail)
         : `Devin API error (${response.status})`;
     throw new Error(message);
   }
@@ -90,7 +99,7 @@ async function createSession({
   const result = DevinResponseSchema.safeParse(data);
   if (!result.success) {
     console.error(
-      `Invalid Devin API response ${JSON.stringify(data)} ${result.error}`
+      `Invalid Devin API response ${JSON.stringify(data)} ${result.error}`,
     );
     throw new Error("Invalid response from Devin API");
   }
@@ -109,7 +118,7 @@ async function createSession({
 }
 
 export async function createDevinSession(
-  args: CreateSession
+  args: CreateSession,
 ): Promise<DevinSessionData> {
   return callEventHandler<DevinSessionData>({
     extensionId: EXTENSION_ID,
@@ -123,17 +132,25 @@ registerEventHandler({
   eventName: "createDevinSession",
   schema: CreateSessionSchema,
   resultSchema: DevinSessionDataSchema,
-  handler: async (args, { settings }) => {
+  handler: async (args, { settings: rawSettings }) => {
     const { prompt, title, tags, playbookId, repository, baseBranch } = args;
 
-    const defaultTags = parseTags(settings.sessionTags as string | undefined);
+    const parsedSettings = ExtensionSettingsSchema.safeParse(rawSettings);
+    if (!parsedSettings.success) {
+      console.error(
+        `Invalid extension settings: ${parsedSettings.error.message}`,
+      );
+      throw new Error("Extension settings are not properly configured");
+    }
+    const settings = parsedSettings.data;
+
+    const defaultTags = parseTags(settings.sessionTags);
     const effectiveTags = tags && tags.length ? tags : defaultTags;
-    const effectivePlaybookId =
-      playbookId || (settings.playbookId as string | undefined) || undefined;
-    const apiKey = settings.devinApiToken as string | undefined;
+    const effectivePlaybookId = playbookId || settings.playbookId || undefined;
+    const apiKey = settings.personalApiKey ?? settings.apiKey ?? undefined;
 
     if (!apiKey) {
-      throw new Error("Devin API key is not configured");
+      throw new Error("API key is not configured");
     }
 
     const result = await createSession({

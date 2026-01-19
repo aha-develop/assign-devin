@@ -36,13 +36,13 @@ const AssignDevinButton: React.FC<AssignDevinButtonProps> = ({
   const baseBranch = settings.baseBranch?.trim() || "main";
 
   const [status, setStatus] = useState<Status>(
-    existingSession ? "existing" : "idle"
+    existingSession ? "existing" : "idle",
   );
   const [message, setMessage] = useState<string>(
-    existingSession ? "Assigned to Devin." : ""
+    existingSession ? "Sent to Devin." : "",
   );
   const [sessionUrl, setSessionUrl] = useState<string>(
-    existingSession?.sessionUrl || ""
+    existingSession?.sessionUrl || "",
   );
 
   if (!repository || !repository.includes("/")) {
@@ -89,7 +89,7 @@ const AssignDevinButton: React.FC<AssignDevinButtonProps> = ({
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       setStatus("error");
-      setMessage(`Error: ${errorMessage}`);
+      setMessage(errorMessage);
     }
   };
 

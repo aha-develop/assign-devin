@@ -1,10 +1,32 @@
 # Assign to Devin.ai
 
+This is an extension for [Aha! Develop](https://www.aha.io/develop) providing integration with [Devin](https://devin.ai/).
 Assign Features and Requirements to [Devin](https://devin.ai/) directly from Aha! Develop.
+
+This extension adds a new Devin.ai field which you can assign to Features and Layouts.
+
+## Demo
+
+todo
+
+## Screen shots
+
+todo
+
+## Installing the extension
+
+To install the extension authorize Devin.ai with your github account
+
+Make sure Devin has access to your repositories. [Refer to Devins documentation on this](https://docs.devin.ai/onboard-devin/repo-setup#set-up-a-repository)
+
+Setup the extension by specifying the API key, the repo and branch.
+
+Add the extension field to your Feature and Requirement screens.
+
+A link to the created devin.ai session will be displayed after sending.
 
 ## Contributions
 
-- Command: **Assign to Devin.ai** – available on Features and Requirements to create a Devin session for the selected record.
 - Attribute view: **Devin** – renders on Feature and Requirement sidebars to show assignment status and trigger new sessions.
 
 ## Configuration

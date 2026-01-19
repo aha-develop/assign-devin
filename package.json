@@ -1,16 +1,17 @@
 {
   "name": "aha.assign-devin-ai",
-  "description": "Assign to Devin.ai",
-  "version": "0.0.0",
-  "author": "tim-field",
+  "description": "Devin.ai",
+  "version": "0.0.1",
+  "author": "Aha! (support@aha.io)",
   "repository": {
     "type": "git",
-    "url": "TODO: Add the GitHub URL to your extension in package.json"
+    "url": "https://github.com/aha-develop/assign-devin"
   },
   "license": "MIT",
   "devDependencies": {
     "@types/react": "^16.14.68",
-    "aha-cli": "^1.17.0"
+    "aha-cli": "^1.17.0",
+    "prettier": "^3.8.0"
   },
   "ahaExtension": {
     "contributes": {
@@ -19,16 +20,6 @@
           "title": "Devin",
           "entryPoint": "src/views/AssignDevinButton.tsx",
           "host": "attribute",
-          "recordTypes": [
-            "Feature",
-            "Requirement"
-          ]
-        }
-      },
-      "commands": {
-        "assignDevin": {
-          "title": "Assign to Devin.ai",
-          "entryPoint": "src/commands/assignDevin.ts",
           "recordTypes": [
             "Feature",
             "Requirement"
@@ -57,7 +48,7 @@
         },
         "baseBranch": {
           "title": "Base Branch",
-          "description": "Default branch for Devin to branch from",
+          "description": "Repositories default branch",
           "type": "string",
           "default": "main",
           "scope": [
@@ -65,14 +56,22 @@
             "user"
           ]
         },
-        "devinApiToken": {
-          "title": "Devin API Token",
-          "description": "Personal or service API token starting with apk_",
+        "apiKey": {
+          "title": "Service API Key",
+          "description": "Organization-scoped service key for automation",
           "type": "secret",
           "scope": [
             "account"
           ],
           "required": true
+        },
+        "personalApiKey": {
+          "title": "Personal API Key",
+          "description": "Personal API keys are tied to individual user accounts and scoped to an org.",
+          "type": "secret",
+          "scope": [
+            "user"
+          ]
         },
         "sessionTags": {
           "title": "Default Session Tags",
