@@ -113,7 +113,7 @@ registerEventHandler({
     }
     const settings = parsedSettings.data;
 
-    const { repository, baseBranch, playbookId, sessionTags } = settings;
+    const { playbookId, sessionTags } = settings;
     const tags = parseTags(sessionTags);
     const apiKey = settings.personalApiKey ?? settings.apiKey ?? undefined;
 
