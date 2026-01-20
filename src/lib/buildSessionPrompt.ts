@@ -48,7 +48,7 @@ async function describeFeature(record: RecordType) {
     "id",
     "name",
     "referenceNum",
-    "path"
+    "path",
   )
     .merge({
       description: ["markdownBody"],
@@ -65,7 +65,7 @@ async function describeFeature(record: RecordType) {
     ? `### Requirements\n${feature.requirements
         .map(
           (req) =>
-            `- **${req.referenceNum}**: ${req.name || "No name provided"}`
+            `- **${req.referenceNum}**: ${req.name || "No name provided"}`,
         )
         .join("\n")}`
     : "";
@@ -90,7 +90,7 @@ async function describeRequirement(record: RecordType) {
     "id",
     "name",
     "referenceNum",
-    "path"
+    "path",
   )
     .merge({
       description: ["markdownBody"],
@@ -129,7 +129,7 @@ async function describeRequirement(record: RecordType) {
 
 export async function buildSessionPrompt(
   record: RecordType,
-  options: BuildSessionOptions
+  options: BuildSessionOptions,
 ): Promise<DevinSessionPayload> {
   const { customInstructions, repository, baseBranch = "main" } = options;
 
@@ -164,8 +164,6 @@ export async function buildSessionPrompt(
   }
 
   const title = `${describe.referenceNum}: ${describe.title}`;
-
-  console.log("Prepared Devin session payload", { title, prompt });
 
   return {
     title,

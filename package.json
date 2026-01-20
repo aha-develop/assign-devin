@@ -1,7 +1,7 @@
 {
-  "name": "aha.assign-devin-ai",
+  "name": "aha-develop.assign-devin-ai",
   "description": "Devin.ai",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "author": "Aha! (support@aha.io)",
   "repository": {
     "type": "git",
@@ -16,9 +16,9 @@
   "ahaExtension": {
     "contributes": {
       "views": {
-        "assignDevinButton": {
-          "title": "Devin",
-          "entryPoint": "src/views/AssignDevinButton.tsx",
+        "sendToDevinButton": {
+          "title": "Devin.ai",
+          "entryPoint": "src/views/SendToDevinButton.tsx",
           "host": "attribute",
           "recordTypes": [
             "Feature",
@@ -31,14 +31,14 @@
           "title": "Create Devin Session",
           "entryPoint": "src/events/createDevinSession.ts",
           "handles": [
-            "aha.assign-devin-ai.createDevinSession"
+            "aha-develop.assign-devin-ai.createDevinSession"
           ]
         }
       },
       "settings": {
         "repository": {
           "title": "GitHub Repository",
-          "description": "Format: owner/repo (e.g., myorg/myrepo)",
+          "description": "Format: owner/repo (e.g., myorg/myrepo). Ensure you have Devin.ai integrated with this repo https://app.devin.ai/settings/repositories",
           "type": "string",
           "required": true,
           "scope": [

@@ -2,36 +2,27 @@ import React, { useState } from "react";
 import {
   createDevinSession,
   DevinSessionData,
+  DevinSessionDataSchema,
 } from "../events/createDevinSession";
 import { buildSessionPrompt } from "../lib/buildSessionPrompt";
-import { EXTENSION_ID, SESSION_FIELD } from "../lib/constants";
-import { RecordType, isAssignableRecord } from "../lib/records";
-import { parseTags } from "../lib/settings";
+import { EXTENSION_ID, EXTENSION_NAME, SESSION_FIELD } from "../lib/constants";
+import { isAssignableRecord, RecordType } from "../lib/records";
+import { ExtensionSettings, ExtensionSettingsSchema } from "../lib/settings";
 import { Icon } from "./Icon";
 
 type Status = "idle" | "loading" | "success" | "error" | "existing";
 
-type ViewSettings = {
-  customInstructions?: string;
-  sessionTags?: string;
-  playbookId?: string;
-  repository?: string;
-  baseBranch?: string;
-};
-
-interface AssignDevinButtonProps {
+interface SendToDevinButtonProps {
   record: RecordType;
-  settings: ViewSettings;
+  settings: ExtensionSettings;
   existingSession?: DevinSessionData;
 }
 
-const AssignDevinButton: React.FC<AssignDevinButtonProps> = ({
+const SendToDevinButton: React.FC<SendToDevinButtonProps> = ({
   record,
   settings,
   existingSession,
 }) => {
-  console.log("AssignDevinButton settings", JSON.stringify(settings, null, 2));
-
   const repository = settings.repository?.trim();
   const baseBranch = settings.baseBranch?.trim() || "main";
 
@@ -64,26 +55,17 @@ const AssignDevinButton: React.FC<AssignDevinButtonProps> = ({
         baseBranch,
       });
 
-      const tags = parseTags(settings.sessionTags);
-      const playbookId = settings.playbookId || undefined;
-
-      setMessage("Creating Devin session...");
+      setMessage(`Creating ${EXTENSION_NAME} session...`);
 
       const session = await createDevinSession({
-        recordReference: record.referenceNum,
-        recordType: record.typename,
         title,
         prompt,
-        repository,
-        baseBranch,
-        tags,
-        playbookId,
       });
 
       await record.setExtensionField(EXTENSION_ID, SESSION_FIELD, session);
 
       setStatus("success");
-      setMessage("Devin session created.");
+      setMessage(`${EXTENSION_NAME} session created.`);
       setSessionUrl(session.sessionUrl || "");
     } catch (error) {
       const errorMessage =
@@ -146,7 +128,7 @@ const AssignDevinButton: React.FC<AssignDevinButtonProps> = ({
   );
 };
 
-aha.on("assignDevinButton", ({ record, fields }, { settings }) => {
+aha.on("sendToDevinButton", ({ record, fields }, { settings: rawSettings }) => {
   if (!isAssignableRecord(record)) {
     return (
       <aha-alert type="danger">
@@ -155,14 +137,37 @@ aha.on("assignDevinButton", ({ record, fields }, { settings }) => {
     );
   }
 
+  const parsedSettings = ExtensionSettingsSchema.safeParse(rawSettings);
+  if (!parsedSettings.success) {
+    console.error(
+      `Invalid extension settings: ${parsedSettings.error.message}`,
+    );
+    return (
+      <aha-alert type="danger">
+        Please ensure required{" "}
+        <a href="/develop/settings/account/extensions">
+          {EXTENSION_NAME} settings
+        </a>{" "}
+        are configured.
+      </aha-alert>
+    );
+  }
+
+  const rawField = fields?.[SESSION_FIELD];
+  const recordSession = DevinSessionDataSchema.safeParse(rawField);
+  const existingSession = recordSession.success
+    ? recordSession.data
+    : undefined;
+
+  const settings = parsedSettings.data;
+
   const typedRecord = record as RecordType;
-  const existing = fields?.[SESSION_FIELD] as DevinSessionData | undefined;
 
   return (
-    <AssignDevinButton
+    <SendToDevinButton
       record={typedRecord}
-      settings={settings as ViewSettings}
-      existingSession={existing}
+      settings={settings}
+      existingSession={existingSession}
     />
   );
 });
