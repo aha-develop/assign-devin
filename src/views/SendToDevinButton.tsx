@@ -10,11 +10,17 @@ import { isAssignableRecord, RecordType } from "../lib/records";
 import { ExtensionSettings, ExtensionSettingsSchema } from "../lib/settings";
 import { Icon } from "./Icon";
 
-type Status = "idle" | "loading" | "success" | "error" | "existing";
+type Status =
+  | "not-configured"
+  | "idle"
+  | "loading"
+  | "success"
+  | "error"
+  | "existing";
 
 interface SendToDevinButtonProps {
   record: RecordType;
-  settings: ExtensionSettings;
+  settings?: ExtensionSettings;
   existingSession?: DevinSessionData;
 }
 
@@ -23,11 +29,8 @@ const SendToDevinButton: React.FC<SendToDevinButtonProps> = ({
   settings,
   existingSession,
 }) => {
-  const repository = settings.repository?.trim();
-  const baseBranch = settings.baseBranch?.trim() || "main";
-
   const [status, setStatus] = useState<Status>(
-    existingSession ? "existing" : "idle",
+    !settings ? "not-configured" : existingSession ? "existing" : "idle",
   );
   const [message, setMessage] = useState<string>(
     existingSession ? "Sent to Devin." : "",
@@ -36,15 +39,10 @@ const SendToDevinButton: React.FC<SendToDevinButtonProps> = ({
     existingSession?.sessionUrl || "",
   );
 
-  if (!repository || !repository.includes("/")) {
-    return (
-      <aha-alert type="warning">
-        Configure the repository setting (e.g., owner/repo) to assign Devin.
-      </aha-alert>
-    );
-  }
-
   const handleClick = async () => {
+    const repository = settings.repository?.trim();
+    const baseBranch = settings.baseBranch?.trim() || "main";
+
     setStatus("loading");
     setMessage("Gathering context...");
 
@@ -55,7 +53,7 @@ const SendToDevinButton: React.FC<SendToDevinButtonProps> = ({
         baseBranch,
       });
 
-      setMessage(`Creating ${EXTENSION_NAME} session...`);
+      setMessage(`Creating Devin session...`);
 
       const session = await createDevinSession({
         title,
@@ -65,7 +63,9 @@ const SendToDevinButton: React.FC<SendToDevinButtonProps> = ({
       await record.setExtensionField(EXTENSION_ID, SESSION_FIELD, session);
 
       setStatus("success");
-      setMessage(`${EXTENSION_NAME} session created.`);
+      setMessage(
+        `Success. Devin has started work on this ${record.typename.toLowerCase()}.`,
+      );
       setSessionUrl(session.sessionUrl || "");
     } catch (error) {
       const errorMessage =
@@ -76,54 +76,126 @@ const SendToDevinButton: React.FC<SendToDevinButtonProps> = ({
   };
 
   return (
-    <div style={{ padding: "8px 0" }}>
-      {status === "idle" && (
-        <aha-button kind="secondary" size="small" onClick={handleClick}>
-          <span
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              marginTop: "4px",
-            }}
-          >
-            <Icon /> Send to Devin
-          </span>
-        </aha-button>
+    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+      {(status === "idle" ||
+        status === "error" ||
+        status === "not-configured") && (
+        <>
+          {status === "error" && (
+            <aha-alert type="danger" size="mini">
+              {message || "An unexpected error occurred."}{" "}
+            </aha-alert>
+          )}
+
+          <Field
+            label="Build with Devin"
+            button={
+              status === "not-configured" ? (
+                <aha-button
+                  kind="secondary"
+                  size="small"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.open("/develop/settings/account/extensions");
+                  }}
+                >
+                  Configure to Devin <i className="fa-regular fa-gear"></i>
+                </aha-button>
+              ) : (
+                <aha-button kind="secondary" size="small" onClick={handleClick}>
+                  Send to Devin <i className="fa-regular fa-arrow-right"></i>
+                </aha-button>
+              )
+            }
+            footer={`Share this ${record.typename.toLowerCase()} with Devin to begin implementation.`}
+          />
+        </>
       )}
 
       {status === "loading" && (
-        <aha-alert type="info">
-          <aha-spinner slot="icon" /> {message}
-        </aha-alert>
+        <Field
+          label="Sending to Devin..."
+          button={
+            <aha-button
+              kind="secondary"
+              size="small"
+              onClick={(e) => {
+                e.preventDefault();
+              }}
+            >
+              <span>
+                Creating session
+                <aha-spinner style={{ marginLeft: "6px" }} size="10px" />
+              </span>
+            </aha-button>
+          }
+          footer={message}
+        />
       )}
 
       {(status === "success" || status === "existing") && (
-        <aha-alert type={status === "success" ? "success" : "info"}>
-          {message}{" "}
-          {sessionUrl && (
-            <a href={sessionUrl} target="_blank" rel="noopener noreferrer">
-              View session
-            </a>
+        <>
+          {status === "success" && (
+            <aha-alert type="success" size="mini">
+              {message}
+            </aha-alert>
           )}
-        </aha-alert>
+          <Field
+            label="Assigned to Devin.ai"
+            button={
+              <aha-button
+                kind="secondary"
+                size="small"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.open(sessionUrl, "_blank", "noopener noreferrer");
+                }}
+              >
+                View Session
+                <i className="fa-regular fa-arrow-up-right" />
+              </aha-button>
+            }
+          />
+        </>
       )}
+    </div>
+  );
+};
 
-      {status === "error" && (
-        <aha-alert type="danger">
-          {message || "An unexpected error occurred."}{" "}
-          <aha-button
-            size="small"
-            kind="secondary"
-            onClick={() => {
-              setStatus(existingSession ? "existing" : "idle");
-              setMessage(existingSession ? "Assigned to Devin." : "");
-            }}
-          >
-            Try again
-          </aha-button>
-        </aha-alert>
-      )}
+const Field = ({
+  label,
+  button,
+  footer,
+}: {
+  label: string;
+  button: React.ReactNode;
+  footer?: React.ReactNode;
+}) => {
+  return (
+    <div
+      style={{
+        display: "flex",
+        paddingLeft: "7px",
+        flexDirection: "column",
+        gap: "4px",
+      }}
+    >
+      <div style={{ display: "flex", width: "100%", alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "6px",
+            flex: "1 0 auto",
+            alignItems: "center",
+          }}
+        >
+          <Icon /> {label}
+        </div>
+        {button}
+      </div>
+      {footer ? (
+        <div style={{ color: "var(--theme-secondary-text)" }}>{footer}</div>
+      ) : null}
     </div>
   );
 };
@@ -137,29 +209,14 @@ aha.on("sendToDevinButton", ({ record, fields }, { settings: rawSettings }) => {
     );
   }
 
-  const parsedSettings = ExtensionSettingsSchema.safeParse(rawSettings);
-  if (!parsedSettings.success) {
-    console.error(
-      `Invalid extension settings: ${parsedSettings.error.message}`,
-    );
-    return (
-      <aha-alert type="danger">
-        Please ensure required{" "}
-        <a href="/develop/settings/account/extensions">
-          {EXTENSION_NAME} settings
-        </a>{" "}
-        are configured.
-      </aha-alert>
-    );
-  }
-
   const rawField = fields?.[SESSION_FIELD];
   const recordSession = DevinSessionDataSchema.safeParse(rawField);
   const existingSession = recordSession.success
     ? recordSession.data
     : undefined;
 
-  const settings = parsedSettings.data;
+  const parsedSettings = ExtensionSettingsSchema.safeParse(rawSettings);
+  const settings = parsedSettings.success ? parsedSettings.data : undefined;
 
   const typedRecord = record as RecordType;
 
