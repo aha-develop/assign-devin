@@ -5,10 +5,11 @@ import {
   DevinSessionDataSchema,
 } from "../events/createDevinSession";
 import { buildSessionPrompt } from "../lib/buildSessionPrompt";
-import { EXTENSION_ID, EXTENSION_NAME, SESSION_FIELD } from "../lib/constants";
+import { EXTENSION_ID, SESSION_FIELD } from "../lib/constants";
 import { isAssignableRecord, RecordType } from "../lib/records";
 import { ExtensionSettings, ExtensionSettingsSchema } from "../lib/settings";
 import { Icon } from "./Icon";
+import { SendToAI } from "./SendToAI";
 
 type Status =
   | "not-configured"
@@ -76,45 +77,46 @@ const SendToDevinButton: React.FC<SendToDevinButtonProps> = ({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+    <>
       {(status === "idle" ||
         status === "error" ||
         status === "not-configured") && (
-        <>
-          {status === "error" && (
-            <aha-alert type="danger" size="mini">
-              {message || "An unexpected error occurred."}{" "}
-            </aha-alert>
-          )}
-
-          <Field
-            label="Build with Devin"
-            button={
-              status === "not-configured" ? (
-                <aha-button
-                  kind="secondary"
-                  size="small"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    window.open("/develop/settings/account/extensions");
-                  }}
-                >
-                  Configure Devin <i className="fa-regular fa-gear"></i>
-                </aha-button>
-              ) : (
-                <aha-button kind="secondary" size="small" onClick={handleClick}>
-                  Send to Devin <i className="fa-regular fa-arrow-right"></i>
-                </aha-button>
-              )
-            }
-            footer={`Share this ${record.typename.toLowerCase()} with Devin to begin implementation.`}
-          />
-        </>
+        <SendToAI
+          label="Build with Devin"
+          icon={<Icon />}
+          button={
+            status === "not-configured" ? (
+              <aha-button
+                kind="secondary"
+                size="small"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.open("/develop/settings/account/extensions");
+                }}
+              >
+                Configure Devin <i className="fa-regular fa-gear"></i>
+              </aha-button>
+            ) : (
+              <aha-button kind="secondary" size="small" onClick={handleClick}>
+                Send to Devin <i className="fa-regular fa-arrow-right"></i>
+              </aha-button>
+            )
+          }
+          footer={`Share this ${record.typename.toLowerCase()} with Devin to begin implementation.`}
+          alert={
+            status === "error" ? (
+              <aha-alert type="danger" size="mini">
+                {message || "An unexpected error occurred."}
+              </aha-alert>
+            ) : null
+          }
+        />
       )}
 
       {status === "loading" && (
-        <Field
+        <SendToAI
           label="Sending to Devin..."
+          icon={<Icon />}
           button={
             <aha-button
               kind="secondary"
@@ -135,13 +137,9 @@ const SendToDevinButton: React.FC<SendToDevinButtonProps> = ({
 
       {(status === "success" || status === "existing") && (
         <>
-          {status === "success" && (
-            <aha-alert type="success" size="mini">
-              {message}
-            </aha-alert>
-          )}
-          <Field
-            label="Assigned to Devin.ai"
+          <SendToAI
+            label="Assigned to Devin"
+            icon={<Icon />}
             button={
               <aha-button
                 kind="secondary"
@@ -155,48 +153,17 @@ const SendToDevinButton: React.FC<SendToDevinButtonProps> = ({
                 <i className="fa-regular fa-arrow-up-right" />
               </aha-button>
             }
+            alert={
+              status === "success" ? (
+                <aha-alert type="success" size="mini">
+                  {message}
+                </aha-alert>
+              ) : null
+            }
           />
         </>
       )}
-    </div>
-  );
-};
-
-const Field = ({
-  label,
-  button,
-  footer,
-}: {
-  label: string;
-  button: React.ReactNode;
-  footer?: React.ReactNode;
-}) => {
-  return (
-    <div
-      style={{
-        display: "flex",
-        paddingLeft: "7px",
-        flexDirection: "column",
-        gap: "4px",
-      }}
-    >
-      <div style={{ display: "flex", width: "100%", alignItems: "center" }}>
-        <div
-          style={{
-            display: "flex",
-            gap: "6px",
-            flex: "1 0 auto",
-            alignItems: "center",
-          }}
-        >
-          <Icon /> {label}
-        </div>
-        {button}
-      </div>
-      {footer ? (
-        <div style={{ color: "var(--theme-secondary-text)" }}>{footer}</div>
-      ) : null}
-    </div>
+    </>
   );
 };
 
