@@ -99,7 +99,7 @@ const SendToDevinButton: React.FC<SendToDevinButtonProps> = ({
                     window.open("/develop/settings/account/extensions");
                   }}
                 >
-                  Configure to Devin <i className="fa-regular fa-gear"></i>
+                  Configure Devin <i className="fa-regular fa-gear"></i>
                 </aha-button>
               ) : (
                 <aha-button kind="secondary" size="small" onClick={handleClick}>
