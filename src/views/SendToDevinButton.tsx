@@ -88,7 +88,7 @@ const SendToDevinButton: React.FC<SendToDevinButtonProps> = ({
           )}
 
           <Field
-            label="Build with Devin.ai"
+            label="Build with Devin"
             button={
               status === "not-configured" ? (
                 <aha-button
@@ -114,7 +114,7 @@ const SendToDevinButton: React.FC<SendToDevinButtonProps> = ({
 
       {status === "loading" && (
         <Field
-          label="Sending to Devin.ai..."
+          label="Sending to Devin..."
           button={
             <aha-button
               kind="secondary"
