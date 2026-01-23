@@ -75,9 +75,7 @@ export async function callEventHandler<T>({
   const eventKey = generateEventKey(eventName);
 
   // Clear any previous response with the same key
-  await aha.account.clearExtensionField(extensionId, eventKey).catch(() => {
-    /* no-op */
-  });
+  await aha.account.clearExtensionField(extensionId, eventKey);
 
   // Trigger the server event with args + eventKey
   aha.triggerServer(`${extensionId}.${eventName}`, {
@@ -93,7 +91,7 @@ export async function callEventHandler<T>({
 
     const stored = await aha.account.getExtensionField<ServerResponse<T>>(
       extensionId,
-      eventKey
+      eventKey,
     );
 
     if (stored) {
@@ -106,11 +104,7 @@ export async function callEventHandler<T>({
         return stored.result;
       }
 
-      console.warn(
-        `Event handler error ${extensionId}.${eventName} ${JSON.stringify(
-          stored
-        )}`
-      );
+      console.warn(`Event handler error ${extensionId}.${eventName}`);
 
       const message =
         "message" in stored
@@ -125,7 +119,7 @@ export async function callEventHandler<T>({
 
 export function registerEventHandler<
   TSchema extends z.ZodType,
-  RSchema extends z.ZodType
+  RSchema extends z.ZodType,
 >({
   extensionId,
   eventName,
@@ -138,14 +132,14 @@ export function registerEventHandler<
   resultSchema: RSchema;
   handler: (
     args: z.infer<TSchema>,
-    context: Aha.Context
+    context: Aha.Context,
   ) => Promise<z.infer<RSchema>>;
 }) {
   aha.on({ event: `${extensionId}.${eventName}` }, async (args, context) => {
     const eventKeyResult = baseEventSchema.safeParse(args);
     if (!eventKeyResult.success) {
       console.error(
-        `Missing or invalid eventKey in arguments for ${extensionId}.${eventName}`
+        `Missing or invalid eventKey in arguments for ${extensionId}.${eventName}`,
       );
       return;
     }
@@ -157,7 +151,7 @@ export function registerEventHandler<
         extensionId,
         eventKey,
         payload: storeError(
-          "Invalid arguments passed to event handler: " + parsed.error.message
+          "Invalid arguments passed to event handler: " + parsed.error.message,
         ),
       });
 
