@@ -15,9 +15,9 @@ Assign Features and Requirements to [Devin.ai](https://devin.ai/) directly from 
 
 ## Installing the extension
 
-1. Authorize Devin.ai with your GitHub account, via the [Devin.ai admin interface](https://docs.devin.ai/onboard-devin/repo-setup#set-up-a-repository).
+1. Authorize Devin with your GitHub account, via the [Devin.ai admin interface](https://docs.devin.ai/onboard-devin/repo-setup#set-up-a-repository).
 
-2. Setup the extension **Account Settings -> Extensions -> Devin.ai** by specifying your Devon.ai **API key**, the **GitHub repository** and **Base branch**.
+2. Setup the extension **Account Settings -> Extensions -> Devin** by specifying your Devon.ai **API key**, the **GitHub repository** and **Base branch**.
 
 3. Add the extension field to your Feature and Requirement screens.
 
