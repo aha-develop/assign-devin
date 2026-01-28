@@ -1,4 +1,4 @@
-import * as z from "zod";
+import * as z from "zod/mini";
 import { DEVIN_API_URL, EXTENSION_ID, EXTENSION_NAME } from "../lib/constants";
 import { callEventHandler, registerEventHandler } from "../lib/events";
 import { ExtensionSettingsSchema, parseTags } from "../lib/settings";
