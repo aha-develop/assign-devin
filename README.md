@@ -3,6 +3,8 @@
 This is an extension for [Aha! Develop](https://www.aha.io/develop) providing integration with [Devin.ai](https://devin.ai/).
 Assign Features and Requirements to [Devin.ai](https://devin.ai/) directly from Aha! Develop.
 
+We recommend using this extension in combination with the [Github Develop extension](https://github.com/aha-develop/github)
+
 ## Screen shots
 
 <img width="577" height="72" alt="image" src="https://github.com/user-attachments/assets/c4c3a3e0-a724-4af1-9796-4e3c33b5e2da" />
