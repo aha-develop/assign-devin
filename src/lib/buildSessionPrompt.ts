@@ -1,8 +1,15 @@
 import { RecordType } from "./records";
 
+export interface RecordAttachment {
+  fileName: string;
+  contentType: string;
+  downloadUrl: string;
+}
+
 export interface DevinSessionPayload {
   title: string;
   prompt: string;
+  attachments: RecordAttachment[];
 }
 
 export interface BuildSessionOptions {
@@ -11,11 +18,16 @@ export interface BuildSessionOptions {
   baseBranch?: string;
 }
 
+type NoteWithAttachments = {
+  markdownBody?: string;
+  attachments?: RecordAttachment[];
+};
+
 type FetchedFeature = Aha.Feature & {
   referenceNum: string;
   name: string;
   path: string;
-  description?: { markdownBody?: string };
+  description?: NoteWithAttachments;
   requirements?: Array<{
     referenceNum: string;
     name?: string;
@@ -31,17 +43,34 @@ type FetchedRequirement = Aha.Requirement & {
   referenceNum: string;
   name: string;
   path: string;
-  description?: { markdownBody?: string };
+  description?: NoteWithAttachments;
   feature?: {
     referenceNum: string;
     name?: string;
-    description?: { markdownBody?: string };
+    description?: NoteWithAttachments;
   };
   tasks?: Array<{
     name: string;
     body?: string;
   }>;
 };
+
+function dedupeAttachments(
+  attachments: RecordAttachment[] = [],
+): RecordAttachment[] {
+  const byUrl = new Map<string, RecordAttachment>();
+  for (const attachment of attachments) {
+    if (!byUrl.has(attachment.downloadUrl)) {
+      byUrl.set(attachment.downloadUrl, {
+        fileName: attachment.fileName,
+        contentType: attachment.contentType,
+        downloadUrl: attachment.downloadUrl,
+      });
+    }
+  }
+
+  return Array.from(byUrl.values());
+}
 
 async function describeFeature(record: RecordType) {
   const feature = (await aha.models.Feature.select(
@@ -51,7 +80,13 @@ async function describeFeature(record: RecordType) {
     "path",
   )
     .merge({
-      description: ["markdownBody"],
+      description: aha.models.Note.select("markdownBody").merge({
+        attachments: aha.models.Attachment.select(
+          "fileName",
+          "contentType",
+          "downloadUrl",
+        ),
+      }),
       tasks: aha.models.Task.select("name", "body"),
       requirements: aha.models.Requirement.select("name", "referenceNum"),
     })
@@ -82,7 +117,14 @@ async function describeFeature(record: RecordType) {
     record.referenceNum
   }](${feature.path})\n`;
 
-  return { context, title: feature.name, referenceNum: feature.referenceNum };
+  const attachments = dedupeAttachments(feature.description?.attachments);
+
+  return {
+    context,
+    title: feature.name,
+    referenceNum: feature.referenceNum,
+    attachments,
+  };
 }
 
 async function describeRequirement(record: RecordType) {
@@ -93,10 +135,22 @@ async function describeRequirement(record: RecordType) {
     "path",
   )
     .merge({
-      description: ["markdownBody"],
+      description: aha.models.Note.select("markdownBody").merge({
+        attachments: aha.models.Attachment.select(
+          "fileName",
+          "contentType",
+          "downloadUrl",
+        ),
+      }),
       tasks: aha.models.Task.select("name", "body"),
       feature: aha.models.Feature.select("name", "referenceNum").merge({
-        description: ["markdownBody"],
+        description: aha.models.Note.select("markdownBody").merge({
+          attachments: aha.models.Attachment.select(
+            "fileName",
+            "contentType",
+            "downloadUrl",
+          ),
+        }),
       }),
     })
     .find(record.referenceNum)) as FetchedRequirement | null;
@@ -124,6 +178,10 @@ async function describeRequirement(record: RecordType) {
     context,
     title: requirement.name,
     referenceNum: requirement.referenceNum,
+    attachments: dedupeAttachments([
+      ...(requirement.description?.attachments || []),
+      ...(requirement.feature?.description?.attachments || []),
+    ]),
   };
 }
 
@@ -163,10 +221,11 @@ export async function buildSessionPrompt(
     prompt += `\n### Additional Instructions\n\n${customInstructions}\n`;
   }
 
-  const title = `${describe.referenceNum}: ${describe.title}`;
+  const sessionTitle = `${describe.referenceNum}: ${describe.title}`;
 
   return {
-    title,
+    title: sessionTitle,
     prompt,
+    attachments: describe.attachments,
   };
 }

@@ -1,11 +1,22 @@
 import * as z from "zod/mini";
 import { DEVIN_API_URL, EXTENSION_ID, EXTENSION_NAME } from "../lib/constants";
 import { callEventHandler, registerEventHandler } from "../lib/events";
+import type { RecordAttachment } from "../lib/buildSessionPrompt";
 import { ExtensionSettingsSchema, parseTags } from "../lib/settings";
+
+const AttachmentSchema = z.object({
+  fileName: z.string(),
+  contentType: z.string(),
+  downloadUrl: z.string(),
+});
+
+const DEVIN_SESSIONS_URL = `${DEVIN_API_URL}sessions`;
+const DEVIN_ATTACHMENTS_URL = `${DEVIN_API_URL}attachments`;
 
 const CreateSessionSchema = z.object({
   title: z.string(),
   prompt: z.string(),
+  attachments: z.optional(z.array(AttachmentSchema)),
 });
 
 const DevinResponseSchema = z.object({
@@ -23,6 +34,63 @@ export const DevinSessionDataSchema = z.object({
 export type DevinSessionData = z.infer<typeof DevinSessionDataSchema>;
 
 export type CreateSession = z.infer<typeof CreateSessionSchema>;
+
+async function uploadAttachment(
+  attachment: RecordAttachment,
+  apiKey: string,
+): Promise<string> {
+  const response = await fetch(attachment.downloadUrl);
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to download attachment ${attachment.fileName} (${response.status})`,
+    );
+  }
+
+  const blob = await response.blob();
+
+  const formData = new FormData();
+  formData.append("file", blob, attachment.fileName);
+
+  const uploadResponse = await fetch(DEVIN_ATTACHMENTS_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: formData,
+  });
+
+  const bodyText = await uploadResponse.text().catch(() => "");
+
+  if (!uploadResponse.ok) {
+    const message = bodyText
+      ? `${EXTENSION_NAME} attachment upload failed: ${bodyText}`
+      : `${EXTENSION_NAME} attachment upload failed (${uploadResponse.status})`;
+    throw new Error(message);
+  }
+
+  const trimmed = bodyText.trim();
+  if (!trimmed) {
+    throw new Error(`${EXTENSION_NAME} attachment upload returned no URL`);
+  }
+
+  return trimmed;
+}
+
+async function uploadAttachments(
+  attachments: RecordAttachment[],
+  apiKey: string,
+): Promise<string[]> {
+  if (!attachments.length) {
+    return [];
+  }
+
+  const uploads = attachments.map((attachment) =>
+    uploadAttachment(attachment, apiKey),
+  );
+
+  return Promise.all(uploads);
+}
 
 async function createSession({
   prompt,
@@ -50,7 +118,7 @@ async function createSession({
     sessionPayload.playbook_id = playbookId;
   }
 
-  const response = await fetch(DEVIN_API_URL, {
+  const response = await fetch(DEVIN_SESSIONS_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -100,7 +168,11 @@ registerEventHandler({
   schema: CreateSessionSchema,
   resultSchema: DevinSessionDataSchema,
   handler: async (args, { settings: rawSettings }) => {
-    const { prompt, title } = args;
+    const { prompt, title, attachments = [] } = args;
+
+    console.log(
+      `Creating Devin session with attachments: ${attachments.length}`,
+    );
 
     const parsedSettings = ExtensionSettingsSchema.safeParse(rawSettings);
     if (!parsedSettings.success) {
@@ -121,8 +193,17 @@ registerEventHandler({
       throw new Error(`${EXTENSION_NAME} API key is not configured`);
     }
 
+    const attachmentUrls = await uploadAttachments(attachments, apiKey);
+    const attachmentLines = attachmentUrls
+      .map((url) => `ATTACHMENT:"${url}"`)
+      .join("\n");
+
+    const finalPrompt = attachmentLines
+      ? `${prompt.trimEnd()}\n\n${attachmentLines}`
+      : prompt;
+
     const result = await createSession({
-      prompt,
+      prompt: finalPrompt,
       title,
       tags,
       playbookId,

@@ -48,17 +48,21 @@ const SendToDevinButton: React.FC<SendToDevinButtonProps> = ({
     setMessage("Gathering context...");
 
     try {
-      const { title, prompt } = await buildSessionPrompt(record, {
+      const { title, prompt, attachments } = await buildSessionPrompt(record, {
         customInstructions: settings.customInstructions,
         repository,
         baseBranch,
       });
 
       setMessage(`Creating Devin session...`);
+      console.log(
+        `Creating Devin session with ${JSON.stringify(attachments)} attachments`,
+      );
 
       const session = await createDevinSession({
         title,
         prompt,
+        attachments,
       });
 
       await record.setExtensionField(EXTENSION_ID, SESSION_FIELD, session);
