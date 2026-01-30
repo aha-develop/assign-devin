@@ -1,4 +1,6 @@
-import { z } from "zod";
+// Todo move to aha-app extensions lib
+
+import { z } from "zod/mini";
 
 interface ServerSuccess<T> {
   ok: true;
@@ -118,8 +120,8 @@ export async function callEventHandler<T>({
 }
 
 export function registerEventHandler<
-  TSchema extends z.ZodType,
-  RSchema extends z.ZodType,
+  TSchema extends z.ZodMiniType,
+  RSchema extends z.ZodMiniType,
 >({
   extensionId,
   eventName,

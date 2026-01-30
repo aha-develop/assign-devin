@@ -149,7 +149,7 @@ const SendToDevinButton: React.FC<SendToDevinButtonProps> = ({
                   window.open(sessionUrl, "_blank", "noopener noreferrer");
                 }}
               >
-                View Session
+                View session
                 <i className="fa-regular fa-arrow-up-right" />
               </aha-button>
             }

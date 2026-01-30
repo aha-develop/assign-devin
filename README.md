@@ -3,6 +3,8 @@
 This is an extension for [Aha! Develop](https://www.aha.io/develop) providing integration with [Devin.ai](https://devin.ai/).
 Assign Features and Requirements to [Devin.ai](https://devin.ai/) directly from Aha! Develop.
 
+We recommend using this extension in combination with the [Github Develop extension](https://github.com/aha-develop/github)
+
 ## Screen shots
 
 <img width="577" height="72" alt="image" src="https://github.com/user-attachments/assets/c4c3a3e0-a724-4af1-9796-4e3c33b5e2da" />
@@ -15,11 +17,13 @@ Assign Features and Requirements to [Devin.ai](https://devin.ai/) directly from 
 
 ## Installing the extension
 
-1. Authorize Devin.ai with your GitHub account, via the [Devin.ai admin interface](https://docs.devin.ai/onboard-devin/repo-setup#set-up-a-repository).
+1. Install the extension by clicking [here](https://secure.aha.io/settings/account/extensions/install?url=https%3A%2F%2Fsecure.aha.io%2Fextensions%2Faha-develop.assign-devin-ai.gz).
 
-2. Setup the extension **Account Settings -> Extensions -> Devin.ai** by specifying your Devon.ai **API key**, the **GitHub repository** and **Base branch**.
+1. Authorize Devin with your GitHub account, via the [Devin.ai admin interface](https://docs.devin.ai/onboard-devin/repo-setup#set-up-a-repository).
 
-3. Add the extension field to your Feature and Requirement screens.
+1. Setup the extension **Account Settings -> Extensions -> Devin** by specifying your Devon.ai **API key**, the **GitHub repository** and **Base branch**.
+
+1. Add the extension field to your Feature and Requirement screens.
 
 [setup-extension-fied.mp4](https://github.com/user-attachments/assets/f2745b85-d038-4371-86a3-3beabdf4103d)
 
