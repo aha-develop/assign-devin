@@ -36,11 +36,30 @@ Settings live in the extension configuration UI in Aha!. Missing API keys or inv
 
 All cross-process communication uses extension fields as a mailbox; the client polls until the server writes back a success or error payload.
 
+## Server-Side Environment
+
+Server-side event handlers (like `createDevinSession.ts`) run in a **pure JavaScript sandbox**, not Node.js or a browser. Only ECMAScript standard APIs are available, plus `fetch` which Aha! adds explicitly.
+
+**Available:**
+- Core JavaScript (Uint8Array, Map, Promise, etc.)
+- `fetch` API (added by Aha!)
+- Pure JS npm packages (e.g., `base-64`, `zod`)
+
+**NOT Available:**
+- Web APIs: `Blob`, `FormData`, `TextEncoder`, `atob`, `btoa`, `createImageBitmap`
+- Node.js APIs: `Buffer`, `fs`, `crypto`, streams
+
+This means:
+- Use the `base-64` npm package for base64 encoding/decoding
+- Construct multipart/form-data manually using `Uint8Array` (see `buildMultipartBody()`)
+- Convert strings to bytes with `charCodeAt()` instead of `TextEncoder`
+
+See: https://support.aha.io/aha-develop/support-articles/extensions/extension-security-model
+
 ## Development Notes
 
 - Install dependencies and manage builds with `aha-cli` (`aha extension:install`, `aha extension:watch`, `aha extension:build`).
 - UI components rely on React and the Aha! web components (`aha-button`, `aha-alert`, etc.).
-- Server-side fetch runs in the Aha! extension environment; no extra polyfills are required.
 - Zod Mini (`zod/mini`) keeps bundle size low while still enforcing schemas on inputs/outputs.
 
 ## Operational Tips

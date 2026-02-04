@@ -37,15 +37,7 @@ export type DevinSessionData = z.infer<typeof DevinSessionDataSchema>;
 
 export type CreateSession = z.infer<typeof CreateSessionSchema>;
 
-function base64ToBytes(base64Data: string): Uint8Array {
-  const binaryString = base64.decode(base64Data);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes;
-}
-
+// Converts a string to bytes (replacement for TextEncoder which isn't available)
 function stringToBytes(str: string): Uint8Array {
   const bytes = new Uint8Array(str.length);
   for (let i = 0; i < str.length; i++) {
@@ -54,6 +46,8 @@ function stringToBytes(str: string): Uint8Array {
   return bytes;
 }
 
+// We need to resort to this manual multipart/form-data construction
+// as the lambda environment doesn't support Blob or FormData APIs.
 function buildMultipartBody(
   fileBytes: Uint8Array,
   fileName: string,
@@ -84,12 +78,10 @@ async function uploadAttachment(
   apiKey: string,
 ): Promise<string> {
   if (!attachment.base64Data) {
-    throw new Error(
-      `Attachment ${attachment.fileName} is missing base64 data`,
-    );
+    throw new Error(`Attachment ${attachment.fileName} is missing base64 data`);
   }
 
-  const fileBytes = base64ToBytes(attachment.base64Data);
+  const fileBytes = stringToBytes(base64.decode(attachment.base64Data));
   const boundary = `----FormBoundary${Date.now()}`;
   const body = buildMultipartBody(
     fileBytes,
