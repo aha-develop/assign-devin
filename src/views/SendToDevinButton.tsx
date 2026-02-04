@@ -55,9 +55,6 @@ const SendToDevinButton: React.FC<SendToDevinButtonProps> = ({
       });
 
       setMessage(`Creating Devin session...`);
-      console.log(
-        `Creating Devin session with ${JSON.stringify(attachments)} attachments`,
-      );
 
       const session = await createDevinSession({
         title,

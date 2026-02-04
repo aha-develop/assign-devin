@@ -79,10 +79,6 @@ export async function callEventHandler<T>({
   // Clear any previous response with the same key
   await aha.account.clearExtensionField(extensionId, eventKey);
 
-  console.log(
-    `Triggering event ${extensionId}.${eventName} with args ${JSON.stringify(args, null, 2)}`,
-  );
-
   // Trigger the server event with args + eventKey
   aha.triggerServer(`${extensionId}.${eventName}`, {
     ...args,

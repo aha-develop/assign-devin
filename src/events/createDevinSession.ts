@@ -1,4 +1,5 @@
 import * as z from "zod/mini";
+import base64 from "base-64";
 import { DEVIN_API_URL, EXTENSION_ID, EXTENSION_NAME } from "../lib/constants";
 import { callEventHandler, registerEventHandler } from "../lib/events";
 import type { RecordAttachment } from "../lib/buildSessionPrompt";
@@ -8,6 +9,7 @@ const AttachmentSchema = z.object({
   fileName: z.string(),
   contentType: z.string(),
   downloadUrl: z.string(),
+  base64Data: z.optional(z.string()),
 });
 
 const DEVIN_SESSIONS_URL = `${DEVIN_API_URL}sessions`;
@@ -35,29 +37,74 @@ export type DevinSessionData = z.infer<typeof DevinSessionDataSchema>;
 
 export type CreateSession = z.infer<typeof CreateSessionSchema>;
 
+function base64ToBytes(base64Data: string): Uint8Array {
+  const binaryString = base64.decode(base64Data);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function stringToBytes(str: string): Uint8Array {
+  const bytes = new Uint8Array(str.length);
+  for (let i = 0; i < str.length; i++) {
+    bytes[i] = str.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function buildMultipartBody(
+  fileBytes: Uint8Array,
+  fileName: string,
+  contentType: string,
+  boundary: string,
+): Uint8Array {
+  const header =
+    `--${boundary}\r\n` +
+    `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
+    `Content-Type: ${contentType}\r\n\r\n`;
+  const footer = `\r\n--${boundary}--\r\n`;
+
+  const headerBytes = stringToBytes(header);
+  const footerBytes = stringToBytes(footer);
+
+  const body = new Uint8Array(
+    headerBytes.length + fileBytes.length + footerBytes.length,
+  );
+  body.set(headerBytes, 0);
+  body.set(fileBytes, headerBytes.length);
+  body.set(footerBytes, headerBytes.length + fileBytes.length);
+
+  return body;
+}
+
 async function uploadAttachment(
   attachment: RecordAttachment,
   apiKey: string,
 ): Promise<string> {
-  const response = await fetch(attachment.downloadUrl);
-
-  if (!response.ok) {
+  if (!attachment.base64Data) {
     throw new Error(
-      `Failed to download attachment ${attachment.fileName} (${response.status})`,
+      `Attachment ${attachment.fileName} is missing base64 data`,
     );
   }
 
-  const blob = await response.blob();
-
-  const formData = new FormData();
-  formData.append("file", blob, attachment.fileName);
+  const fileBytes = base64ToBytes(attachment.base64Data);
+  const boundary = `----FormBoundary${Date.now()}`;
+  const body = buildMultipartBody(
+    fileBytes,
+    attachment.fileName,
+    attachment.contentType,
+    boundary,
+  );
 
   const uploadResponse = await fetch(DEVIN_ATTACHMENTS_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
+      "Content-Type": `multipart/form-data; boundary=${boundary}`,
     },
-    body: formData,
+    body: body as unknown as BodyInit,
   });
 
   const bodyText = await uploadResponse.text().catch(() => "");

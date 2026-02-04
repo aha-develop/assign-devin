@@ -1,9 +1,63 @@
+import base64 from "base-64";
 import { RecordType } from "./records";
 
 export interface RecordAttachment {
   fileName: string;
   contentType: string;
   downloadUrl: string;
+  base64Data?: string;
+}
+
+interface RawAttachment {
+  fileName: string;
+  contentType: string;
+  downloadUrl: string;
+}
+
+async function fetchImageAsBase64(
+  attachment: RawAttachment,
+): Promise<RecordAttachment | null> {
+  try {
+    const response = await fetch(attachment.downloadUrl);
+    if (!response.ok) {
+      console.warn(
+        `Failed to fetch attachment ${attachment.fileName}: ${response.status}`,
+      );
+      return null;
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const base64Data = base64.encode(
+      new Uint8Array(arrayBuffer).reduce(
+        (data, byte) => data + String.fromCharCode(byte),
+        "",
+      ),
+    );
+
+    return {
+      fileName: attachment.fileName,
+      contentType: attachment.contentType,
+      downloadUrl: attachment.downloadUrl,
+      base64Data,
+    };
+  } catch (error) {
+    console.warn(`Error fetching attachment ${attachment.fileName}: ${error}`);
+    return null;
+  }
+}
+
+async function fetchAttachmentsAsBase64(
+  attachments: RawAttachment[] | undefined,
+): Promise<RecordAttachment[]> {
+  if (!attachments?.length) {
+    return [];
+  }
+
+  const results = await Promise.all(
+    attachments.map((att) => fetchImageAsBase64(att)),
+  );
+
+  return results.filter((att): att is RecordAttachment => att !== null);
 }
 
 export interface DevinSessionPayload {
@@ -55,10 +109,10 @@ type FetchedRequirement = Aha.Requirement & {
   }>;
 };
 
-function dedupeAttachments(
-  attachments: RecordAttachment[] = [],
-): RecordAttachment[] {
-  const byUrl = new Map<string, RecordAttachment>();
+function dedupeRawAttachments(
+  attachments: RawAttachment[] = [],
+): RawAttachment[] {
+  const byUrl = new Map<string, RawAttachment>();
   for (const attachment of attachments) {
     if (!byUrl.has(attachment.downloadUrl)) {
       byUrl.set(attachment.downloadUrl, {
@@ -117,7 +171,8 @@ async function describeFeature(record: RecordType) {
     record.referenceNum
   }](${feature.path})\n`;
 
-  const attachments = dedupeAttachments(feature.description?.attachments);
+  const rawAttachments = dedupeRawAttachments(feature.description?.attachments);
+  const attachments = await fetchAttachmentsAsBase64(rawAttachments);
 
   return {
     context,
@@ -174,14 +229,17 @@ async function describeRequirement(record: RecordType) {
     requirement.path
   })\n`;
 
+  const rawAttachments = dedupeRawAttachments([
+    ...(requirement.description?.attachments || []),
+    ...(requirement.feature?.description?.attachments || []),
+  ]);
+  const attachments = await fetchAttachmentsAsBase64(rawAttachments);
+
   return {
     context,
     title: requirement.name,
     referenceNum: requirement.referenceNum,
-    attachments: dedupeAttachments([
-      ...(requirement.description?.attachments || []),
-      ...(requirement.feature?.description?.attachments || []),
-    ]),
+    attachments,
   };
 }
 
