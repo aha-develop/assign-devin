@@ -48,7 +48,7 @@ const SendToDevinButton: React.FC<SendToDevinButtonProps> = ({
     setMessage("Gathering context...");
 
     try {
-      const { title, prompt } = await buildSessionPrompt(record, {
+      const { title, prompt, attachments } = await buildSessionPrompt(record, {
         customInstructions: settings.customInstructions,
         repository,
         baseBranch,
@@ -59,6 +59,7 @@ const SendToDevinButton: React.FC<SendToDevinButtonProps> = ({
       const session = await createDevinSession({
         title,
         prompt,
+        attachments,
       });
 
       await record.setExtensionField(EXTENSION_ID, SESSION_FIELD, session);

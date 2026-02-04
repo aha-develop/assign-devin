@@ -1,8 +1,69 @@
+import base64 from "base-64";
 import { RecordType } from "./records";
+
+export interface RecordAttachment {
+  fileName: string;
+  contentType: string;
+  downloadUrl: string;
+  base64Data?: string;
+}
+
+interface RawAttachment {
+  fileName: string;
+  contentType: string;
+  downloadUrl: string;
+}
+
+async function fetchImageAsBase64(
+  attachment: RawAttachment,
+): Promise<RecordAttachment | null> {
+  try {
+    const response = await fetch(attachment.downloadUrl);
+    if (!response.ok) {
+      console.warn(
+        `Failed to fetch attachment ${attachment.fileName}: ${response.status}`,
+      );
+      return null;
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const base64Data = base64.encode(
+      new Uint8Array(arrayBuffer).reduce(
+        (data, byte) => data + String.fromCharCode(byte),
+        "",
+      ),
+    );
+
+    return {
+      fileName: attachment.fileName,
+      contentType: attachment.contentType,
+      downloadUrl: attachment.downloadUrl,
+      base64Data,
+    };
+  } catch (error) {
+    console.warn(`Error fetching attachment ${attachment.fileName}: ${error}`);
+    return null;
+  }
+}
+
+async function fetchAttachmentsAsBase64(
+  attachments: RawAttachment[] | undefined,
+): Promise<RecordAttachment[]> {
+  if (!attachments?.length) {
+    return [];
+  }
+
+  const results = await Promise.all(
+    attachments.map((att) => fetchImageAsBase64(att)),
+  );
+
+  return results.filter((att): att is RecordAttachment => att !== null);
+}
 
 export interface DevinSessionPayload {
   title: string;
   prompt: string;
+  attachments: RecordAttachment[];
 }
 
 export interface BuildSessionOptions {
@@ -11,11 +72,16 @@ export interface BuildSessionOptions {
   baseBranch?: string;
 }
 
+type NoteWithAttachments = {
+  markdownBody?: string;
+  attachments?: RecordAttachment[];
+};
+
 type FetchedFeature = Aha.Feature & {
   referenceNum: string;
   name: string;
   path: string;
-  description?: { markdownBody?: string };
+  description?: NoteWithAttachments;
   requirements?: Array<{
     referenceNum: string;
     name?: string;
@@ -31,17 +97,34 @@ type FetchedRequirement = Aha.Requirement & {
   referenceNum: string;
   name: string;
   path: string;
-  description?: { markdownBody?: string };
+  description?: NoteWithAttachments;
   feature?: {
     referenceNum: string;
     name?: string;
-    description?: { markdownBody?: string };
+    description?: NoteWithAttachments;
   };
   tasks?: Array<{
     name: string;
     body?: string;
   }>;
 };
+
+function dedupeRawAttachments(
+  attachments: RawAttachment[] = [],
+): RawAttachment[] {
+  const byUrl = new Map<string, RawAttachment>();
+  for (const attachment of attachments) {
+    if (!byUrl.has(attachment.downloadUrl)) {
+      byUrl.set(attachment.downloadUrl, {
+        fileName: attachment.fileName,
+        contentType: attachment.contentType,
+        downloadUrl: attachment.downloadUrl,
+      });
+    }
+  }
+
+  return Array.from(byUrl.values());
+}
 
 async function describeFeature(record: RecordType) {
   const feature = (await aha.models.Feature.select(
@@ -51,7 +134,13 @@ async function describeFeature(record: RecordType) {
     "path",
   )
     .merge({
-      description: ["markdownBody"],
+      description: aha.models.Note.select("markdownBody").merge({
+        attachments: aha.models.Attachment.select(
+          "fileName",
+          "contentType",
+          "downloadUrl",
+        ),
+      }),
       tasks: aha.models.Task.select("name", "body"),
       requirements: aha.models.Requirement.select("name", "referenceNum"),
     })
@@ -82,7 +171,15 @@ async function describeFeature(record: RecordType) {
     record.referenceNum
   }](${feature.path})\n`;
 
-  return { context, title: feature.name, referenceNum: feature.referenceNum };
+  const rawAttachments = dedupeRawAttachments(feature.description?.attachments);
+  const attachments = await fetchAttachmentsAsBase64(rawAttachments);
+
+  return {
+    context,
+    title: feature.name,
+    referenceNum: feature.referenceNum,
+    attachments,
+  };
 }
 
 async function describeRequirement(record: RecordType) {
@@ -93,10 +190,22 @@ async function describeRequirement(record: RecordType) {
     "path",
   )
     .merge({
-      description: ["markdownBody"],
+      description: aha.models.Note.select("markdownBody").merge({
+        attachments: aha.models.Attachment.select(
+          "fileName",
+          "contentType",
+          "downloadUrl",
+        ),
+      }),
       tasks: aha.models.Task.select("name", "body"),
       feature: aha.models.Feature.select("name", "referenceNum").merge({
-        description: ["markdownBody"],
+        description: aha.models.Note.select("markdownBody").merge({
+          attachments: aha.models.Attachment.select(
+            "fileName",
+            "contentType",
+            "downloadUrl",
+          ),
+        }),
       }),
     })
     .find(record.referenceNum)) as FetchedRequirement | null;
@@ -120,10 +229,17 @@ async function describeRequirement(record: RecordType) {
     requirement.path
   })\n`;
 
+  const rawAttachments = dedupeRawAttachments([
+    ...(requirement.description?.attachments || []),
+    ...(requirement.feature?.description?.attachments || []),
+  ]);
+  const attachments = await fetchAttachmentsAsBase64(rawAttachments);
+
   return {
     context,
     title: requirement.name,
     referenceNum: requirement.referenceNum,
+    attachments,
   };
 }
 
@@ -168,5 +284,6 @@ export async function buildSessionPrompt(
   return {
     title,
     prompt,
+    attachments: describe.attachments,
   };
 }
