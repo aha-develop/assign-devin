@@ -209,10 +209,6 @@ registerEventHandler({
   handler: async (args, { settings: rawSettings }) => {
     const { prompt, title, attachments = [] } = args;
 
-    console.log(
-      `Creating Devin session with attachments: ${attachments.length}`,
-    );
-
     const parsedSettings = ExtensionSettingsSchema.safeParse(rawSettings);
     if (!parsedSettings.success) {
       console.error(

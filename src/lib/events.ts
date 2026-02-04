@@ -149,9 +149,6 @@ export function registerEventHandler<
     const parsed = schema.safeParse(args);
 
     if (!parsed.success) {
-      console.log(
-        `Invalid arguments for ${extensionId}.${eventName}: ${JSON.stringify(args, null, 2)}`,
-      );
       await writeResult({
         extensionId,
         eventKey,
