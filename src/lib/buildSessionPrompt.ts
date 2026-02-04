@@ -279,10 +279,10 @@ export async function buildSessionPrompt(
     prompt += `\n### Additional Instructions\n\n${customInstructions}\n`;
   }
 
-  const sessionTitle = `${describe.referenceNum}: ${describe.title}`;
+  const title = `${describe.referenceNum}: ${describe.title}`;
 
   return {
-    title: sessionTitle,
+    title,
     prompt,
     attachments: describe.attachments,
   };
