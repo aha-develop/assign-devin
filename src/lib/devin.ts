@@ -146,11 +146,6 @@ export async function createSession({
     sessionPayload.playbook_id = playbookId;
   }
 
-  console.log(
-    `Creating Devin session with payload: ${JSON.stringify(sessionPayload, null, 2)}`,
-  );
-  // throw new Error("WIP Testing");
-
   const response = await fetch(DEVIN_SESSIONS_URL, {
     method: "POST",
     headers: {
