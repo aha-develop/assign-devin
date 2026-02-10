@@ -4,8 +4,7 @@ import {
   DevinSessionData,
   DevinSessionDataSchema,
 } from "../events/createDevinSession";
-import { buildSessionPrompt } from "../lib/buildSessionPrompt";
-import { EXTENSION_ID, SESSION_FIELD } from "../lib/constants";
+import { SESSION_FIELD } from "../lib/constants";
 import { isAssignableRecord, RecordType } from "../lib/records";
 import { ExtensionSettings, ExtensionSettingsSchema } from "../lib/settings";
 import { Icon } from "./Icon";
@@ -41,28 +40,15 @@ const SendToDevinButton: React.FC<SendToDevinButtonProps> = ({
   );
 
   const handleClick = async () => {
-    const repository = settings.repository?.trim();
-    const baseBranch = settings.baseBranch?.trim() || "main";
-
     setStatus("loading");
     setMessage("Gathering context...");
 
     try {
-      const { title, prompt, attachments } = await buildSessionPrompt(record, {
-        customInstructions: settings.customInstructions,
-        repository,
-        baseBranch,
-      });
-
       setMessage(`Creating Devin session...`);
 
       const session = await createDevinSession({
-        title,
-        prompt,
-        attachments,
+        record,
       });
-
-      await record.setExtensionField(EXTENSION_ID, SESSION_FIELD, session);
 
       setStatus("success");
       setMessage(
