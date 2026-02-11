@@ -1,11 +1,7 @@
-import base64 from "base-64";
-import { RecordType } from "./records";
-
 export interface RecordAttachment {
   fileName: string;
   contentType: string;
   downloadUrl: string;
-  base64Data?: string;
 }
 
 interface RawAttachment {
@@ -14,56 +10,11 @@ interface RawAttachment {
   downloadUrl: string;
 }
 
-async function fetchImageAsBase64(
-  attachment: RawAttachment,
-): Promise<RecordAttachment | null> {
-  try {
-    const response = await fetch(attachment.downloadUrl);
-    if (!response.ok) {
-      console.warn(
-        `Failed to fetch attachment ${attachment.fileName}: ${response.status}`,
-      );
-      return null;
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const base64Data = base64.encode(
-      new Uint8Array(arrayBuffer).reduce(
-        (data, byte) => data + String.fromCharCode(byte),
-        "",
-      ),
-    );
-
-    return {
-      fileName: attachment.fileName,
-      contentType: attachment.contentType,
-      downloadUrl: attachment.downloadUrl,
-      base64Data,
-    };
-  } catch (error) {
-    console.warn(`Error fetching attachment ${attachment.fileName}: ${error}`);
-    return null;
-  }
-}
-
-async function fetchAttachmentsAsBase64(
-  attachments: RawAttachment[] | undefined,
-): Promise<RecordAttachment[]> {
-  if (!attachments?.length) {
-    return [];
-  }
-
-  const results = await Promise.all(
-    attachments.map((att) => fetchImageAsBase64(att)),
-  );
-
-  return results.filter((att): att is RecordAttachment => att !== null);
-}
-
 export interface DevinSessionPayload {
   title: string;
   prompt: string;
   attachments: RecordAttachment[];
+  model: FetchedFeature | FetchedRequirement;
 }
 
 export interface BuildSessionOptions {
@@ -109,9 +60,7 @@ type FetchedRequirement = Aha.Requirement & {
   }>;
 };
 
-function dedupeRawAttachments(
-  attachments: RawAttachment[] = [],
-): RawAttachment[] {
+function dedupeAttachments(attachments: RawAttachment[] = []): RawAttachment[] {
   const byUrl = new Map<string, RawAttachment>();
   for (const attachment of attachments) {
     if (!byUrl.has(attachment.downloadUrl)) {
@@ -126,7 +75,7 @@ function dedupeRawAttachments(
   return Array.from(byUrl.values());
 }
 
-async function describeFeature(record: RecordType) {
+export async function describeFeature(id: string) {
   const feature = (await aha.models.Feature.select(
     "id",
     "name",
@@ -135,16 +84,14 @@ async function describeFeature(record: RecordType) {
   )
     .merge({
       description: aha.models.Note.select("markdownBody").merge({
-        attachments: aha.models.Attachment.select(
-          "fileName",
-          "contentType",
-          "downloadUrl",
-        ),
+        attachments: aha.models.Attachment.select("fileName", "contentType", {
+          downloadUrl: { withToken: true },
+        }),
       }),
       tasks: aha.models.Task.select("name", "body"),
       requirements: aha.models.Requirement.select("name", "referenceNum"),
     })
-    .find(record.referenceNum)) as FetchedFeature | null;
+    .find(id)) as FetchedFeature | null;
 
   if (!feature) {
     throw new Error("Failed to load feature details");
@@ -168,21 +115,21 @@ async function describeFeature(record: RecordType) {
   const context = `### Description\n\n${
     feature.description?.markdownBody || "No description provided."
   }\n\n${requirementsBlock}\n\n${todosBlock}\n\n**Aha! Reference:** [${
-    record.referenceNum
+    feature.referenceNum
   }](${feature.path})\n`;
 
-  const rawAttachments = dedupeRawAttachments(feature.description?.attachments);
-  const attachments = await fetchAttachmentsAsBase64(rawAttachments);
+  const attachments = dedupeAttachments(feature.description?.attachments);
 
   return {
     context,
     title: feature.name,
     referenceNum: feature.referenceNum,
     attachments,
+    model: feature,
   };
 }
 
-async function describeRequirement(record: RecordType) {
+export async function describeRequirement(id: string) {
   const requirement = (await aha.models.Requirement.select(
     "id",
     "name",
@@ -191,24 +138,20 @@ async function describeRequirement(record: RecordType) {
   )
     .merge({
       description: aha.models.Note.select("markdownBody").merge({
-        attachments: aha.models.Attachment.select(
-          "fileName",
-          "contentType",
-          "downloadUrl",
-        ),
+        attachments: aha.models.Attachment.select("fileName", "contentType", {
+          downloadUrl: { withToken: true },
+        }),
       }),
       tasks: aha.models.Task.select("name", "body"),
       feature: aha.models.Feature.select("name", "referenceNum").merge({
         description: aha.models.Note.select("markdownBody").merge({
-          attachments: aha.models.Attachment.select(
-            "fileName",
-            "contentType",
-            "downloadUrl",
-          ),
+          attachments: aha.models.Attachment.select("fileName", "contentType", {
+            downloadUrl: { withToken: true },
+          }),
         }),
       }),
     })
-    .find(record.referenceNum)) as FetchedRequirement | null;
+    .find(id)) as FetchedRequirement | null;
 
   if (!requirement) {
     throw new Error("Failed to load requirement details");
@@ -225,34 +168,34 @@ async function describeRequirement(record: RecordType) {
   }\n\n## Feature ${requirement.feature?.referenceNum}\n\n${
     requirement.feature?.description?.markdownBody ||
     "No feature description provided."
-  }\n\n${todosBlock}\n\n**Aha! Reference:** [${record.referenceNum}](${
+  }\n\n${todosBlock}\n\n**Aha! Reference:** [${requirement.referenceNum}](${
     requirement.path
   })\n`;
 
-  const rawAttachments = dedupeRawAttachments([
+  const attachments = dedupeAttachments([
     ...(requirement.description?.attachments || []),
     ...(requirement.feature?.description?.attachments || []),
   ]);
-  const attachments = await fetchAttachmentsAsBase64(rawAttachments);
 
   return {
     context,
     title: requirement.name,
     referenceNum: requirement.referenceNum,
     attachments,
+    model: requirement,
   };
 }
 
 export async function buildSessionPrompt(
-  record: RecordType,
+  record: { id: string; typename: "Feature" | "Requirement" },
   options: BuildSessionOptions,
 ): Promise<DevinSessionPayload> {
   const { customInstructions, repository, baseBranch = "main" } = options;
 
   const describe =
     record.typename === "Feature"
-      ? await describeFeature(record)
-      : await describeRequirement(record);
+      ? await describeFeature(record.id)
+      : await describeRequirement(record.id);
 
   const header = `You are being assigned the Aha! ${record.typename.toLowerCase()} ${
     describe.referenceNum
@@ -285,5 +228,6 @@ export async function buildSessionPrompt(
     title,
     prompt,
     attachments: describe.attachments,
+    model: describe.model,
   };
 }

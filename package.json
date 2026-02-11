@@ -1,7 +1,7 @@
 {
   "name": "aha-develop.assign-devin-ai",
   "description": "Devin.ai",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "author": "Aha! (support@aha.io)",
   "repository": {
     "type": "git",
@@ -32,7 +32,8 @@
           "entryPoint": "src/events/createDevinSession.ts",
           "handles": [
             "aha-develop.assign-devin-ai.createDevinSession"
-          ]
+          ],
+          "automatable": true
         }
       },
       "settings": {
@@ -104,7 +105,6 @@
     }
   },
   "dependencies": {
-    "base-64": "^1.0.0",
     "zod": "^4.3.5"
   }
 }

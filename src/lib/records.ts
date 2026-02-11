@@ -1,13 +1,13 @@
 export type FeatureRecord = Pick<
   Aha.Feature,
-  "typename" | "referenceNum" | "setExtensionField" | "getExtensionField"
+  "typename" | "id" | "referenceNum" | "setExtensionField" | "getExtensionField"
 > & {
   typename: "Feature";
 };
 
 export type RequirementRecord = Pick<
   Aha.Requirement,
-  "typename" | "referenceNum" | "setExtensionField" | "getExtensionField"
+  "typename" | "id" | "referenceNum" | "setExtensionField" | "getExtensionField"
 > & {
   typename: "Requirement";
 };
@@ -19,7 +19,7 @@ export function isAssignableRecord(record: unknown): record is RecordType {
     !!record &&
     (record as { typename?: string }).typename !== undefined &&
     (["Feature", "Requirement"] as string[]).includes(
-      (record as { typename: string }).typename
+      (record as { typename: string }).typename,
     ) &&
     typeof (record as FeatureRecord).referenceNum === "string"
   );
