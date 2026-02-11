@@ -1,6 +1,7 @@
 import * as z from "zod/mini";
 import { RecordAttachment } from "./buildSessionPrompt";
 import { DEVIN_API_URL, EXTENSION_NAME } from "./constants";
+import { DevinSessionData } from "../events/createDevinSession";
 
 const DEVIN_SESSIONS_URL = `${DEVIN_API_URL}sessions`;
 const DEVIN_ATTACHMENTS_URL = `${DEVIN_API_URL}attachments`;
@@ -106,12 +107,6 @@ export async function uploadAttachments(
   );
 
   return Promise.all(uploads);
-}
-
-export interface DevinSessionData {
-  sessionId: string;
-  sessionUrl: string;
-  assignedAt: string;
 }
 
 export async function createSession({

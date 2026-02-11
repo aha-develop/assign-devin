@@ -1,7 +1,6 @@
 import * as z from "zod/mini";
 import { buildSessionPrompt } from "../lib/buildSessionPrompt";
 import { EXTENSION_ID, EXTENSION_NAME, SESSION_FIELD } from "../lib/constants";
-import type { DevinSessionData } from "../lib/devin";
 import { createSession, uploadAttachments } from "../lib/devin";
 import { callEventHandler, registerEventHandler } from "../lib/events";
 import { ExtensionSettingsSchema, parseTags } from "../lib/settings";
