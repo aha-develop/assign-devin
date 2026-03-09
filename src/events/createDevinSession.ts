@@ -1,7 +1,6 @@
 import * as z from "zod/mini";
 import base64 from "base-64";
 import { DEVIN_API_URL, EXTENSION_ID, EXTENSION_NAME } from "../lib/constants";
-import { callEventHandler, registerEventHandler } from "../lib/events";
 import type { RecordAttachment } from "../lib/buildSessionPrompt";
 import { ExtensionSettingsSchema, parseTags } from "../lib/settings";
 
@@ -194,14 +193,14 @@ async function createSession({
 export async function createDevinSession(
   args: CreateSession,
 ): Promise<DevinSessionData> {
-  return callEventHandler<DevinSessionData>({
+  return aha.callEventHandler<DevinSessionData>({
     extensionId: EXTENSION_ID,
     eventName: "createDevinSession",
     args,
   });
 }
 
-registerEventHandler({
+aha.registerEventHandler({
   extensionId: EXTENSION_ID,
   eventName: "createDevinSession",
   schema: CreateSessionSchema,
