@@ -222,7 +222,7 @@ async function describeRequirement(record: RecordType) {
 
   const context = `### Description\n\n${
     requirement.description?.markdownBody || "No description provided."
-  }\n\n## Feature ${requirement.feature?.referenceNum}\n\n${
+  }\n\n## Additional Context from parent Feature ${requirement.feature?.referenceNum}\n\n${
     requirement.feature?.description?.markdownBody ||
     "No feature description provided."
   }\n\n${todosBlock}\n\n**Aha! Reference:** [${record.referenceNum}](${
